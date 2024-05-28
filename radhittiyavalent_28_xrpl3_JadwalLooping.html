@@ -1,79 +1,198 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jadwal Pelajaran</title>
+    <title>Menghitung Indeks Prestasi</title>
     <style>
         table {
-            width: 100%;
-            border-collapse: collapse;
+            border-collapse: collapse; /* Menggabungkan border tabel */
         }
         th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        th {
-            background-color: lightblue;
+            border: 1px solid #ddd; /* Border untuk sel tabel */
+            padding: 8px;           /* Padding untuk sel tabel */
+            text-align: left;       /* Teks rata kiri dalam sel */
         }
     </style>
     <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet" />
 </head>
-<body class="font-serif">
-    <h1 class="font-serif font-bold">Jadwal Pelajaran Umum</h1>
+<body class="w-full flex flex-col justify-center items-center font-mono">
+    <h1 class="my-5 mt-20 text-2xl">Menghitung Indeks Prestasi</h1>
+    <!-- Heading utama halaman -->
+
+    <h1 id="notify" class="my-5 px-2 text-sm text-gray-800 bg-red-300 rounded-md hidden"></h1>
+    <!-- Notifikasi untuk pesan error -->
+
+    <h1 id="credit" class="my-2 px-2 text-sm text-gray-800 bg-green-300 rounded-md hidden"></h1>
+    <!-- Notifikasi untuk credit -->
+
     <table>
-        <thead>
-            <tr>
-                <th>Hari</th>
-                <th>Jam 1</th>
-                <th>Jam 2</th>
-                <th>Jam 3</th>
-                <th>Jam 4</th>
-                <th>Jam 5</th>
-                <th>Jam 6</th>
-                <th>Jam 7</th>
-                <th>Jam 8</th>
-                <th>Jam 9</th>
-                <th>Jam 10</th>
-            </tr>
-        </thead>
-        <tbody id="jadwal-table">
-        </tbody>
+        <tr>
+            <th>Komponen</th>
+            <th>Bobot</th>
+            <th>Nilai</th>
+        </tr>
+        <!-- Header tabel -->
+
+        <tr>
+            <td>Quis</td>
+            <td>10%</td>
+            <td><input onkeyup="calculate()" class="w-full px-2 rounded-md" min="0" max="100" type="number" name="quis" id="quis" placeholder="masukkan nilai"></td>
+            <!-- Input nilai Quis. onkeyup digunakan untuk memanggil fungsi calculate setiap kali pengguna melepaskan tombol pada keyboard. onchange adalah sebuah atribut atau event handler dalam HTML dan JavaScript yang digunakan untuk menangani perubahan pada elemen input, seperti teks, checkbox, dropdown, dan elemen form lainnya. Ketika nilai dari elemen tersebut berubah, fungsi yang terhubung dengan event onchange akan dijalankan.-->
+        </tr>
+        <tr>
+            <td>Tugas</td>
+            <td>20%</td>
+            <td><input onkeyup="calculate()" class="w-full px-2 rounded-md" min="0" max="100" type="number" name="tugas" id="tugas" placeholder="masukkan nilai"></td>
+            <!-- Input nilai Tugas -->
+        </tr>
+        <tr>
+            <td>UTS</td>
+            <td>30%</td>
+            <td><input onkeyup="calculate()" class="w-full px-2 rounded-md" min="0" max="100" type="number" name="uts" id="uts" placeholder="masukkan nilai"></td>
+            <!-- Input nilai UTS -->
+        </tr>
+        <tr>
+            <td>UAS</td>
+            <td>40%</td>
+            <td><input onkeyup="calculate()" class="w-full px-2 rounded-md" min="0" max="100" type="number" name="uas" id="uas" placeholder="masukkan nilai"></td>
+            <!-- Input nilai UAS -->
+        </tr>
+        <tr>
+            <td colspan="2">Indeks Prestasi</td>
+            <td id="indeks-presentasi">-</td>
+            <!-- Menampilkan Indeks Prestasi -->
+        </tr>
+        <tr>
+            <td colspan="2">Keterangan</td>
+            <td id="keterangan">Masukkan Value Data</td>
+            <!-- Menampilkan keterangan -->
+        </tr>
+        <tr>
+            <td colspan="2">Nilai Akhir</td>
+            <td id="nilai-akhir">-</td>
+            <!-- Menampilkan Nilai Akhir -->
+        </tr>
+        <tr>
+            <td colspan="3"><button onclick="reset()" class="w-full transition border-none outline-none hover:bg-gray-500 hover:text-white rounded-md">Reset</button></td>
+            <!-- Tombol Reset untuk mengatur ulang semua input dan hasil -->
+        </tr>
     </table>
 
     <script>
-        const jadwal = {
-            "Senin": ["Bahasa Inggris", "Bahasa Inggris", "PJOK", "PJOK", "Matematika", "Matematika", "Bahasa Indonesia", "Bahasa Indonesia", "Matematika", "Matematika"],
-            "Selasa": ["IPAS", "IPAS", "Matematika", "Matematika", "Bahasa Indonesia", "Bahasa Indonesia", "Simdig", "Simdig", "Simdig", "Simdig"],
-            "Rabu": ["Seni Budaya", "Seni Budaya", "Bahasa Indonesia", "BK", "Bahasa Inggris", "Bahasa Inggris", "Agama", "Agama", "Sejarah Indonesia", "Sejarah Indonesia"],
-            "Kamis": ["Bahasa Inggris", "Bahasa Inggris", "Seni Budaya", "Seni Budaya", "PJOK", "PJOK", "PJOK", "Bahasa Jawa", "Bahasa Jawa", "Bahasa Jawa"],
-            "Jumat": ["PPKN", "PPKN", "PPKN", "IPAS", "IPAS", "Agama", "Agama", "P5", "P5", "P5"]
-        };
+        var credit = "Candra";
+        var creditBool = false;
 
-        const tbody = document.getElementById('jadwal-table');
+        function reset() {
+            sendError(true);
+            let nilaiQuis = document.getElementById("quis");
+            let nilaiTugas = document.getElementById("tugas");
+            let nilaiUTS = document.getElementById("uts");
+            let nilaiUAS = document.getElementById("uas");
 
-        for (const [hari, pelajaran] of Object.entries(jadwal)) {
-            const row = document.createElement('tr');
-            const hariCell = document.createElement('td');
-            hariCell.classList.add("font-bold")
-            hariCell.textContent = hari;
-            row.appendChild(hariCell);
-
-            pelajaran.forEach(pelajaranItem => {
-                const pelajaranCell = document.createElement('td');
-                pelajaranCell.textContent = pelajaranItem;
-                row.appendChild(pelajaranCell);
+            // Menghapus kelas error dari input dan mengatur ulang nilai input
+            [nilaiQuis, nilaiTugas, nilaiUTS, nilaiUAS].forEach((nilai) => {
+                nilai.classList.remove("bg-red-300");
+                nilai.value = "";
             });
 
-            for (let i = pelajaran.length; i < 10; i++) {
-                const emptyCell = document.createElement('td');
-                emptyCell.textContent = "-";
-                row.appendChild(emptyCell);
+            // Mengatur ulang teks hasil
+            document.getElementById("nilai-akhir").textContent = "-";
+            document.getElementById("indeks-presentasi").textContent = "-";
+            document.getElementById("keterangan").textContent = "Berhasil Direset";
+        }
+
+        function sendError(message) {
+            const elmt = document.getElementById("notify");
+            // Menampilkan atau menyembunyikan pesan error
+            if (message === true || message === "") {
+                elmt.classList.add("hidden");
+            } else {
+                elmt.classList.remove("hidden");
+                elmt.innerText = message;
+            }
+        }
+
+        function isCancelled() {
+            let nilaiQuis = document.getElementById("quis");
+            let nilaiTugas = document.getElementById("tugas");
+            let nilaiUTS = document.getElementById("uts");
+            let nilaiUAS = document.getElementById("uas");
+
+            let result = false;
+            let listError = [];
+
+            // Memeriksa validitas input
+            [nilaiQuis, nilaiTugas, nilaiUTS, nilaiUAS].forEach((nilai) => {
+                if (nilai.value === "") {
+                    nilai.classList.add("bg-red-300");
+                    listError.push(`nilai ${nilai.name} kosong`);
+                } else if (+nilai.value > 100) {
+                    nilai.classList.add("bg-red-300");
+                    listError.push(`${nilai.name} lebih dari 100`);
+                } else if (+nilai.value < 0) {
+                    nilai.classList.add("bg-red-300");
+                    listError.push(`${nilai.name} kurang dari 0`);
+                } else {
+                    nilai.classList.remove("bg-red-300");
+                }
+            });
+
+            // Menampilkan error jika ada
+            if (listError.length > 0) {
+                sendError(`Masalah Value: ${listError.join(", ")}`);
+                document.getElementById("nilai-akhir").textContent = "-";
+                document.getElementById("indeks-presentasi").textContent = "-";
+                document.getElementById("keterangan").textContent = "Nilai Invalid";
+                result = true;
+            } else {
+                sendError(true);
             }
 
-            tbody.appendChild(row);
+            return result;
+        }
+
+        function calculate() {
+            let creditElmt = document.getElementById("credit");
+            if (creditBool) {
+                creditElmt.classList.remove("hidden");
+                creditElmt.innerText = "Credit: " + credit;
+            }
+
+            // Mengambil nilai dari input
+            let nilaiQuis = +document.getElementById("quis").value;
+            let nilaiTugas = +document.getElementById("tugas").value;
+            let nilaiUTS = +document.getElementById("uts").value;
+            let nilaiUAS = +document.getElementById("uas").value;
+            let nilaiAkhir = (nilaiQuis * 0.1) + (nilaiTugas * 0.2) + (nilaiUTS * 0.3) + (nilaiUAS * 0.4);
+            let indeksPrestasi;
+            let keterangan;
+
+            // Jika input valid, menghitung dan menampilkan hasil
+            if (!isCancelled()) {
+                if (nilaiAkhir >= 80 && nilaiAkhir <= 100) {
+                    indeksPrestasi = 'A';
+                    keterangan = 'Lulus dengan Sangat Baik';
+                } else if (nilaiAkhir >= 68 && nilaiAkhir < 80) {
+                    indeksPrestasi = 'B';
+                    keterangan = 'Lulus dengan Baik';
+                } else if (nilaiAkhir >= 55 && nilaiAkhir < 68) {
+                    indeksPrestasi = 'C';
+                    keterangan = 'Lulus dengan Cukup';
+                } else if (nilaiAkhir >= 38 && nilaiAkhir < 55) {
+                    indeksPrestasi = 'D';
+                    keterangan = 'Lulus dengan Kurang';
+                } else {
+                    indeksPrestasi = 'F';
+                    keterangan = 'Tidak Lulus';
+                }
+
+                document.getElementById("nilai-akhir").textContent = nilaiAkhir.toFixed(2);
+                document.getElementById("indeks-presentasi").textContent = indeksPrestasi;
+                document.getElementById("keterangan").textContent = keterangan;
+            }
         }
     </script>
 </body>
-</html>
+</html
